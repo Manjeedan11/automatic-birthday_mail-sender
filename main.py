@@ -1,0 +1,48 @@
+import pandas as pd 
+from datetime import datetime
+import smtplib
+from email.message import EmailMessage
+
+def send_email(recipient, subject, msg):
+    GMAIL_ID = 'shakthivelmanjeedan11@gmail.com'
+    GMAIL_PWD = 'xyjn ekdq nqvg ieme'
+
+    email = EmailMessage()
+    email['Subject'] = subject
+    email['From'] = GMAIL_ID
+    email['To'] = recipient
+    email.set_content(msg)
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as gmail_obj:
+            gmail_obj.ehlo()
+            gmail_obj.login(GMAIL_ID, GMAIL_PWD)
+            gmail_obj.send_message(email)
+            return True
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        return False
+
+def send_bday_emails(bday_file):
+    bdays_df = pd.read_excel(bday_file).rename(columns=lambda x: x.strip())
+    today = datetime.now().strftime('%m-%d')
+    year_now = datetime.now().strftime('%Y')
+    sent_index = []
+
+    for idx, item in bdays_df.iterrows():
+        bday = item['Birthday'].to_pydatetime().strftime('%m-%d')
+        if today == bday and year_now not in str(item['Last Sent']):
+            msg = f'Happy Birthday {item["Name"]}!!'
+            if send_email(item['Email'], 'Happy Birthday', msg):
+                print(f"Email sent successfully to {item['Name']} at {item['Email']}.")
+                sent_index.append(idx)
+            else:
+                print(f"Failed to send email to {item['Name']} at {item['Email']}.")
+
+    for idx in sent_index:
+        bdays_df.loc[bdays_df.index[idx], 'Last Sent'] = year_now
+
+    bdays_df.to_excel(bday_file, index=False)
+
+if __name__ == '__main__':
+    send_bday_emails(bday_file='Birthday.xlsx')
